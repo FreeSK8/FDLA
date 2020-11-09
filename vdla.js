@@ -1,12 +1,14 @@
-var units=["°C","A","A","%","km/h","V","Ah","Ah","Wh","Wh","km","W","m","km/h"]
+//DateTime, Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
+var units=["V","°C","°C","%","A","A","e","e","m","km/h"]
 var axes_names=units.filter(function(item, pos, self) {
     return self.indexOf(item) == pos;
 })
-var colors=["red","purple","green","lime","navy","blue","orange","cyan","darkcyan","olive","yellow","teal","maroon","fuchsia"]
+var colors=["blue","red","orange","green","purple","fuchsia","white","yellow","darkcyan"] //"olive","yellow","teal","maroon","fuchsia"
 var fill=["rgba(255, 0, 0, 0.3)","rgba(128, 0, 128, 0.3)","rgba(0, 128, 0, 0.3)","rgba(0, 255, 0, 0.3)","rgba(0, 0, 128, 0.3)","rgba(0, 0, 255, 0.3)","rgba(255, 165, 0, 0.3)","rgba(0, 255, 255, 0.3)","rgba(0, 139, 139, 0.3)","rgba(128, 128, 0, 0.3)","rgba(255, 255, 0, 0.3)","rgba(0, 128, 128, 0.3)","rgba(128, 0, 0, 0.3)","rgba(255, 0, 255, 0.3)"]
-var series_shown=[true,false,true,true,true,true,false,false,false,false,false,true,false,false];
+var series_shown=[true,true,true,false,true,false,false,false,true,true];
 var Times=[];
 var TempPcbs=[];
+var TempMotors=[];
 var MotorCurrents=[];
 var BatteryCurrents=[];
 var DutyCycles=[];
@@ -83,8 +85,8 @@ function touchZoomPlugin(opts) {
       let top = to.y;
 
       // non-uniform scaling
-    //	let xFactor = fr.dx / to.dx;
-    //	let yFactor = fr.dy / to.dy;
+    //  let xFactor = fr.dx / to.dx;
+    //  let yFactor = fr.dy / to.dy;
 
       // uniform x/y scaling
       let xFactor = fr.d / to.d;
@@ -302,15 +304,29 @@ function find_closest_ind(coord){
 
 function create_map(){
   map = L.map('mapid').setView(latlngs[0], 13);
-  L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+  var map1 = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
       attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-      maxZoom: 18,
+      maxZoom: 21,
       id: 'mapbox/streets-v11',
       tileSize: 512,
       zoomOffset: -1,
       accessToken: 'pk.eyJ1IjoieW94Y3UiLCJhIjoiY2s4c21scW8yMDB6MzNkbndlYXpraTEwdSJ9.VGfekLj7rTAtlifcuD4Buw'
   }).addTo(map);
-  var polyline = L.polyline(latlngs, {color: 'red'}).addTo(map);
+  
+  var map2 = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+      maxZoom: 21,
+      id: 'mapbox/satellite-streets-v11',
+      tileSize: 512,
+      zoomOffset: -1,
+      accessToken: 'pk.eyJ1IjoieW94Y3UiLCJhIjoiY2s4c21scW8yMDB6MzNkbndlYXpraTEwdSJ9.VGfekLj7rTAtlifcuD4Buw'
+  }).addTo(map);
+  L.control.layers({  
+    "Street": map1,
+    "Satellite": map2
+  }, null).addTo(map);
+
+  var polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
   // zoom the map to the polyline
   map.fitBounds(polyline.getBounds());
 
@@ -488,8 +504,10 @@ function create_chart(){
 
 function parse_LogFile(txt){
   var lines = txt.split("\n");
+  names="Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, Altitude, Speed".split(",");
   for (var i in lines){
     if (lines[i]!=""){
+      /*
       if (Times.length == 0){
         if (i==0){
           var settings = lines[i].substr(2).split(",");
@@ -500,40 +518,40 @@ function parse_LogFile(txt){
             li.innerHTML=['<strong>', setting[0], '=</strong>',setting[1]].join("");
           }
         } else if (i == 1){
-          names=lines[i].split(",")
           //sort out time,faults,elapsedTime,lat,long
-          names.splice(13,4);
-          names.splice(0,1);
+          //names.splice(13,4);
+          //names.splice(0,1);
         }
       }
-      if (i>1){
+      */
+      if (true){
         var values = lines[i].split(",")
-
-        //DD_MM_YY_HH_MM_SS.sss
-        var ts=values[0].split("_")
-        values=values.map((item)=>{
+        var valueNumbers = values.map((item)=>{
           return Number(item);
-        })
-        values[0]=(new Date([ts[2],"-",ts[1],"-",ts[0],"T",ts[3],":",ts[4],":",ts[5],"Z"].join(""))).getTime()/1000;
-        if (values[15] != 0 && values[16] != 0){
-          Times.push(values[0]);
-          TempPcbs.push(values[1]);
-          MotorCurrents.push(values[2]);
-          BatteryCurrents.push(values[3]);
-          DutyCycles.push(values[4]);
-          Speeds.push(values[5]);
-          InpVoltages.push(values[6]);
-          AmpHours.push(values[7]);
-          AmpHoursCharged.push(values[8]);
-          WattHours.push(values[9]);
-          WattHoursCharged.push(values[10]);
-          Distances.push(values[11]);
-          Powers.push(values[12]);
-          Faults.push(values[13]);
-          TimePassedInMss.push(values[14]);
-          latlngs.push([values[15],values[16]]);
-          Altitudes.push(values[17]);
-          GPSSpeeds.push(values[18]);
+        });
+
+        //2020-10-15T17:08:27
+        var ts=values[0]
+        values[0]=(new Date([values[0],"Z"].join(""))).getTime()/1000;
+        //DateTime, Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
+        //latitude, longitude, sats_in_view, altitude, speed
+        if (values[1] == "values") {
+          if (Times[Times.length -1] != values[0]) Times.push(values[0]);
+          InpVoltages.push(valueNumbers[2]);
+          TempMotors.push(valueNumbers[3]);
+          TempPcbs.push(valueNumbers[4]);
+          DutyCycles.push(valueNumbers[5]);
+          MotorCurrents.push(valueNumbers[6]);
+          BatteryCurrents.push(valueNumbers[7]);
+          Speeds.push(valueNumbers[8]);
+          Distances.push(valueNumbers[9]);
+          //TODO: ESC IDs
+        } else if (values[1] == "position") {
+          if (Times[Times.length -1] != values[0]) Times.push(values[0]);
+          latlngs.push([valueNumbers[2],valueNumbers[3]]);
+          //TODO: sats in view
+          Altitudes.push(valueNumbers[5]);
+          GPSSpeeds.push(valueNumbers[6]);
         }else{
           console.log("found invalid data:\n"+lines[i])
         }
@@ -560,7 +578,8 @@ function append_file_content(files_arr){
     for (i in files_arr){
       parse_LogFile(files_arr[i].reader.result)
     }
-    data = [Times,TempPcbs,MotorCurrents,BatteryCurrents,DutyCycles,Speeds,InpVoltages,AmpHours,AmpHoursCharged,WattHours,WattHoursCharged,Distances,Powers,Altitudes,GPSSpeeds]
+    //Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
+    data = [Times,InpVoltages,TempMotors,TempPcbs,DutyCycles,MotorCurrents,BatteryCurrents,Speeds,Distances,Altitudes,GPSSpeeds]
     create_map();
     create_chart();
     fill_menu();

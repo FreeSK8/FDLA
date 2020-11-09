@@ -57,7 +57,8 @@
 
 .menu_container {
  position: fixed;
- right: 0;
+ right: 100px;
+ top: 10px;
  z-index: 9999;
 }
 
