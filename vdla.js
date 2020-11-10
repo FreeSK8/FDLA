@@ -599,8 +599,9 @@ function handleFileSelect(evt) {
                 f.size, ' bytes', '</li>');
               // Only process image files.
     if (!f.type.match('text.*')) {
-      handleError("Error Selecting File: Not a text/csv File")
-      continue;
+      //TODO: why is this not working for andrew
+      //handleError("Error Selecting File: Not a text/csv File")
+      //continue;
     }
 
 
