@@ -33,11 +33,13 @@ var map;
 var uplot;
 var menu_visible=false;
 var map_popup;
+var first_esc_id = null;
+var multi_esc_mode = false;
 
 //uplot plugins
 function touchZoomPlugin(opts) {
   function init(u, opts, data) {
-    let plot = u.root.querySelector(".over");
+    let plot = u.root.querySelector(".u-over");
     let rect, oxRange, oyRange, xVal, yVal;
     let fr = {x: 0, y: 0, dx: 0, dy: 0};
     let to = {x: 0, y: 0, dx: 0, dy: 0};
@@ -399,14 +401,16 @@ function generate_series(){
     series.push({
       // initial toggled state (optional)
       show: true,
-      spanGaps: false,
+      spanGaps: true,
       // in-legend display
       label: names[i],
       value:  (function() {
         var j = i; // j is a copy of i only available to the scope of the inner function
         var digit_save=digit;
         return function(self,rawValue) {
-          return rawValue.toFixed(digit_save) + units[j]
+          if (rawValue != null) {
+            return rawValue.toFixed(digit_save) + units[j];
+          }
         }
       })(),
       scale: units[i],
@@ -521,15 +525,26 @@ function parse_LogFile(txt){
     }
 
     if (values[1] == "values") {
-      logEntries[values[0]]['vin'] = Number(values[2]);
-      logEntries[values[0]]['tempMotor'] = Number(values[3]);
-      logEntries[values[0]]['tempESC'] = Number(values[4]);
-      logEntries[values[0]]['dutyCycle'] = Number(values[5]);
-      logEntries[values[0]]['currentMotor'] = Number(values[6]);
-      logEntries[values[0]]['currentBattery'] = Number(values[7]);
-      logEntries[values[0]]['speed'] = Number(values[8]);
-      logEntries[values[0]]['distance'] = Number(values[9]);
-      //TODO: ESC IDs
+      var this_esc_id = Number(values[10]);
+      if (first_esc_id == null) {
+        first_esc_id = this_esc_id;
+      }
+      if (this_esc_id == first_esc_id)
+      {
+        logEntries[values[0]]['vin'] = Number(values[2]);
+        logEntries[values[0]]['tempMotor'] = Number(values[3]);
+        logEntries[values[0]]['tempESC'] = Number(values[4]);
+        logEntries[values[0]]['dutyCycle'] = Number(values[5]);
+        logEntries[values[0]]['currentMotor'] = Number(values[6]);
+        logEntries[values[0]]['currentBattery'] = Number(values[7]);
+        logEntries[values[0]]['speed'] = Number(values[8]);
+        logEntries[values[0]]['distance'] = Number(values[9]);
+      }
+      else
+      {
+        //TODO: multiple ESC mode
+        multi_esc_mode = true;
+      }
     } else if (values[1] == "position") {
       logEntries[values[0]]['lat'] = Number(values[2]);
       logEntries[values[0]]['lon'] = Number(values[3]);
