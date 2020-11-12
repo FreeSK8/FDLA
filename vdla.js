@@ -3,9 +3,9 @@ var units=["V","°C","°C","%","A","A","e","e","m","km/h"]
 var axes_names=units.filter(function(item, pos, self) {
     return self.indexOf(item) == pos;
 })
-var colors=["blue","red","orange","green","purple","fuchsia","white","yellow","darkcyan"] //"olive","yellow","teal","maroon","fuchsia"
-var fill=["rgba(255, 0, 0, 0.3)","rgba(128, 0, 128, 0.3)","rgba(0, 128, 0, 0.3)","rgba(0, 255, 0, 0.3)","rgba(0, 0, 128, 0.3)","rgba(0, 0, 255, 0.3)","rgba(255, 165, 0, 0.3)","rgba(0, 255, 255, 0.3)","rgba(0, 139, 139, 0.3)","rgba(128, 128, 0, 0.3)","rgba(255, 255, 0, 0.3)","rgba(0, 128, 128, 0.3)","rgba(128, 0, 0, 0.3)","rgba(255, 0, 255, 0.3)"]
-var series_shown=[true,true,true,false,true,false,false,false,true,true];
+var colors=["blue","red","orange","green","purple","fuchsia","white","yellow","darkcyan", "gold"]
+var fill=["rgba(0, 0, 255, 0.2)","rgba(255, 0, 0, 0.2)","rgba(255, 165, 0, 0.2)","rgba(0, 255, 0, 0.2)","rgba(128, 0, 128, 0.2)","rgba(255, 0, 255, 0.2)","rgba(255, 255, 255, 0.2)","rgba(255, 255, 0, 0.0)","rgba(0, 139, 139, 0.2)","rgba(255, 215, 0, 0.2)"]
+var series_shown=[true,true,true,false,true,false,false,false,false,true];
 var Times=[];
 var TempPcbs=[];
 var TempMotors=[];
@@ -14,14 +14,14 @@ var BatteryCurrents=[];
 var DutyCycles=[];
 var Speeds=[];
 var InpVoltages=[];
-var AmpHours=[];
-var AmpHoursCharged=[];
-var WattHours=[];
-var WattHoursCharged=[];
+//var AmpHours=[];
+//var AmpHoursCharged=[];
+//var WattHours=[];
+//var WattHoursCharged=[];
 var Distances=[];
 var Powers=[];
 var Faults=[];
-var TimePassedInMss=[];
+//var TimePassedInMss=[];
 var latlngs=[];
 var Altitudes=[];
 var GPSSpeeds=[];
@@ -322,8 +322,8 @@ function create_map(){
       accessToken: 'pk.eyJ1IjoieW94Y3UiLCJhIjoiY2s4c21scW8yMDB6MzNkbndlYXpraTEwdSJ9.VGfekLj7rTAtlifcuD4Buw'
   }).addTo(map);
   L.control.layers({  
+    "Satellite": map2,
     "Street": map1,
-    "Satellite": map2
   }, null).addTo(map);
 
   var polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
@@ -413,9 +413,9 @@ function generate_series(){
 
       // series style
       stroke: colors[i],
-      width: 1,
+      width: 2,
       fill: fill[i],
-      dash: [10, 5],
+      //dash: [10, 5],
     });
   }
   return series;
@@ -503,64 +503,58 @@ function create_chart(){
 }
 
 function parse_LogFile(txt){
+  var logEntries = {};
   var lines = txt.split("\n");
   names="Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, Altitude, Speed".split(",");
-  for (var i in lines){
-    if (lines[i]!=""){
-      /*
-      if (Times.length == 0){
-        if (i==0){
-          var settings = lines[i].substr(2).split(",");
-          for (var j in settings){
-            var li=document.createElement('li');
-            document.getElementById('settings_list').appendChild(li);
-            var setting = settings[j].split("=")
-            li.innerHTML=['<strong>', setting[0], '=</strong>',setting[1]].join("");
-          }
-        } else if (i == 1){
-          //sort out time,faults,elapsedTime,lat,long
-          //names.splice(13,4);
-          //names.splice(0,1);
-        }
-      }
-      */
-      if (true){
-        var values = lines[i].split(",")
-        var valueNumbers = values.map((item)=>{
-          return Number(item);
-        });
-
-        //2020-10-15T17:08:27
-        var ts=values[0]
-        values[0]=(new Date([values[0],"Z"].join(""))).getTime()/1000;
-        //DateTime, Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
-        //latitude, longitude, sats_in_view, altitude, speed
-        if (values[1] == "values") {
-          if (Times[Times.length -1] != values[0]) Times.push(values[0]);
-          InpVoltages.push(valueNumbers[2]);
-          TempMotors.push(valueNumbers[3]);
-          TempPcbs.push(valueNumbers[4]);
-          DutyCycles.push(valueNumbers[5]);
-          MotorCurrents.push(valueNumbers[6]);
-          BatteryCurrents.push(valueNumbers[7]);
-          Speeds.push(valueNumbers[8]);
-          Distances.push(valueNumbers[9]);
-          //TODO: ESC IDs
-        } else if (values[1] == "position") {
-          if (Times[Times.length -1] != values[0]) Times.push(values[0]);
-          latlngs.push([valueNumbers[2],valueNumbers[3]]);
-          //TODO: sats in view
-          Altitudes.push(valueNumbers[5]);
-          GPSSpeeds.push(valueNumbers[6]);
-        }else{
-          console.log("found invalid data:\n"+lines[i])
-        }
-      }
+  for (var i in lines) {
+    // Skip empty lines
+    if (lines[i]==""){
+      continue;
     }
-    //var span = document.createElement('span');
-    //span.innerHTML = line;
-    //document.getElementById('file_content').insertBefore(span, null);
-    //document.getElementById('file_content').insertBefore(document.createElement("br"), null);
+
+    // Split CSV
+    var values = lines[i].split(",");
+
+    // Create array item if necessary
+    if(logEntries[values[0]] == null) {
+      logEntries[values[0]] = {vin: null, tempMotor: null, tempESC: null, dutyCycle: null, currentMotor: null, currentBattery: null, speed: null, distance: null, lat: null, lon: null, altitude: null, speedGPS: null, satellites: null};
+    }
+
+    if (values[1] == "values") {
+      logEntries[values[0]]['vin'] = Number(values[2]);
+      logEntries[values[0]]['tempMotor'] = Number(values[3]);
+      logEntries[values[0]]['tempESC'] = Number(values[4]);
+      logEntries[values[0]]['dutyCycle'] = Number(values[5]);
+      logEntries[values[0]]['currentMotor'] = Number(values[6]);
+      logEntries[values[0]]['currentBattery'] = Number(values[7]);
+      logEntries[values[0]]['speed'] = Number(values[8]);
+      logEntries[values[0]]['distance'] = Number(values[9]);
+      //TODO: ESC IDs
+    } else if (values[1] == "position") {
+      logEntries[values[0]]['lat'] = Number(values[2]);
+      logEntries[values[0]]['lon'] = Number(values[3]);
+      logEntries[values[0]]['satellites'] = Number(values[4]);
+      logEntries[values[0]]['altitude'] = Number(values[5]);
+      logEntries[values[0]]['speedGPS'] = Number(values[6]);
+    }else{
+      console.log("unepxected data:\n"+lines[i])
+    }
+  } // i in lines
+
+  // Prepare for uPlot
+  for (const [key, value] of Object.entries(logEntries)) {
+    Times.push((new Date([key,"Z"].join(""))).getTime()/1000);
+    InpVoltages.push(value.vin);
+    TempMotors.push(value.tempMotor);
+    TempPcbs.push(value.tempESC);
+    DutyCycles.push(value.dutyCycle);
+    MotorCurrents.push(value.currentMotor);
+    BatteryCurrents.push(value.currentBattery);
+    Speeds.push(value.speed);
+    Distances.push(value.distance);
+    latlngs.push([value.lat, value.lon]);
+    Altitudes.push(value.altitude);
+    GPSSpeeds.push(value.speedGPS);
   }
 }
 
@@ -597,7 +591,9 @@ function handleFileSelect(evt) {
   for (var i = 0, f; f = files[i]; i++) {
     output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
                 f.size, ' bytes', '</li>');
-              // Only process image files.
+
+    // Only process text files
+    console.log("file type: " + f.type);
     if (!f.type.match('text.*')) {
       //TODO: why is this not working for andrew
       //handleError("Error Selecting File: Not a text/csv File")
@@ -615,7 +611,7 @@ function handleFileSelect(evt) {
         //parse_LogFile(e.target.result);
       };
 
-    // Read in the image file as a data URL.
+    // Read in the file
     reader.readAsText(f);
     files_arr.push({time: time,reader: reader});
   }

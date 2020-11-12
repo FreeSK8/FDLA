@@ -28,11 +28,11 @@
   width: 100%;
 }
 #mapid {
-   height: 50%;
+   height: 48%;
 }
 #chart_container{
    height: 50%;
-   width: 100%;
+   width: 98%;
    display: inline-block;
    margin: auto;
 }
@@ -55,6 +55,9 @@
   100% { transform: rotate(360deg); }
 }
 
+.legend {
+  max-height: 10%;
+}
 .menu_container {
  position: fixed;
  right: 100px;
@@ -75,7 +78,7 @@
 }
 
 #settings_list{
-  height: 100px;
+  max-height: 100px;
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
