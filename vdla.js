@@ -589,7 +589,7 @@ function append_file_content(files_arr){
     }
     //Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
     data = [Times,InpVoltages,TempMotors,TempPcbs,DutyCycles,MotorCurrents,BatteryCurrents,Speeds,Distances,Altitudes,GPSSpeeds]
-    //create_map();
+    create_map();
     create_chart();
     fill_menu();
     show_content();
