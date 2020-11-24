@@ -305,7 +305,15 @@ function find_closest_ind(coord){
 }
 
 function create_map(){
-  map = L.map('mapid').setView(latlngs[0], 13);
+
+  var LatLons = [];
+  for (var i in latlngs) {
+    if (latlngs[i][0] != null) {
+      LatLons.push(latlngs[i]);
+    }
+  }
+
+  map = L.map('mapid').setView(LatLons[0], 13);
   var map1 = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
       attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
       maxZoom: 21,
@@ -328,7 +336,7 @@ function create_map(){
     "Street": map1,
   }, null).addTo(map);
 
-  var polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+  var polyline = L.polyline(LatLons, {color: 'blue'}).addTo(map);
   // zoom the map to the polyline
   map.fitBounds(polyline.getBounds());
 
@@ -558,18 +566,20 @@ function parse_LogFile(txt){
 
   // Prepare for uPlot
   for (const [key, value] of Object.entries(logEntries)) {
-    Times.push((new Date([key,"Z"].join(""))).getTime()/1000);
-    InpVoltages.push(value.vin);
-    TempMotors.push(value.tempMotor);
-    TempPcbs.push(value.tempESC);
-    DutyCycles.push(value.dutyCycle);
-    MotorCurrents.push(value.currentMotor);
-    BatteryCurrents.push(value.currentBattery);
-    Speeds.push(value.speed);
-    Distances.push(value.distance);
-    latlngs.push([value.lat, value.lon]);
-    Altitudes.push(value.altitude);
-    GPSSpeeds.push(value.speedGPS);
+    if(value.vin != null) {
+      Times.push((new Date([key,"Z"].join(""))).getTime()/1000);
+      InpVoltages.push(value.vin);
+      TempMotors.push(value.tempMotor);
+      TempPcbs.push(value.tempESC);
+      DutyCycles.push(value.dutyCycle);
+      MotorCurrents.push(value.currentMotor);
+      BatteryCurrents.push(value.currentBattery);
+      Speeds.push(value.speed);
+      Distances.push(value.distance);
+      latlngs.push([value.lat, value.lon]);
+      Altitudes.push(value.altitude);
+      GPSSpeeds.push(value.speedGPS);
+    }
   }
 }
 
