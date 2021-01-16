@@ -565,7 +565,7 @@ function parse_LogFile(txt){
       logEntries[values[0]]['lon'] = Number(values[6]);
       logEntries[values[0]]['satellites'] = Number(values[2]);
       logEntries[values[0]]['altitude'] = Number(values[3]);
-      logEntries[values[0]]['speedGPS'] = Number(values[4]);
+      logEntries[values[0]]['speedGPS'] = Math.abs(Number(values[4])); //TODO: abs is a patch
     } else if (values[1] == "esc") {
       //dt,esc,esc_id,voltage,motor_temp,esc_temp,duty_cycle,motor_current,battery_current,watt_hours,watt_hours_regen,e_rpm,e_distance,fault
       var this_esc_id = Number(values[2]);
