@@ -559,7 +559,36 @@ function parse_LogFile(txt){
       logEntries[values[0]]['satellites'] = Number(values[4]);
       logEntries[values[0]]['altitude'] = Number(values[5]);
       logEntries[values[0]]['speedGPS'] = Number(values[6]);
-    }else{
+    } else if (values[1] == "gps") {
+      //dt,gps,satellites,altitude,speed,latitude,longitude
+      logEntries[values[0]]['lat'] = Number(values[5]);
+      logEntries[values[0]]['lon'] = Number(values[6]);
+      logEntries[values[0]]['satellites'] = Number(values[2]);
+      logEntries[values[0]]['altitude'] = Number(values[3]);
+      logEntries[values[0]]['speedGPS'] = Number(values[4]);
+    } else if (values[1] == "esc") {
+      //dt,esc,esc_id,voltage,motor_temp,esc_temp,duty_cycle,motor_current,battery_current,watt_hours,watt_hours_regen,e_rpm,e_distance,fault
+      var this_esc_id = Number(values[2]);
+      if (first_esc_id == null) {
+        first_esc_id = this_esc_id;
+      }
+      if (this_esc_id == first_esc_id)
+      {
+        logEntries[values[0]]['vin'] = Number(values[3]);
+        logEntries[values[0]]['tempMotor'] = Number(values[4]);
+        logEntries[values[0]]['tempESC'] = Number(values[5]);
+        logEntries[values[0]]['dutyCycle'] = Number(values[6]);
+        logEntries[values[0]]['currentMotor'] = Number(values[7]);
+        logEntries[values[0]]['currentBattery'] = Number(values[8]);
+        logEntries[values[0]]['speed'] = Number(values[11]);
+        logEntries[values[0]]['distance'] = Number(values[12]);
+      }
+      else
+      {
+        //TODO: multiple ESC mode
+        multi_esc_mode = true;
+      }
+    } else {
       console.log("unepxected data:\n"+lines[i])
     }
   } // i in lines
