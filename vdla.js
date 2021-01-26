@@ -654,9 +654,7 @@ function handleFileSelect(evt) {
       //continue;
     }
 
-
-    var name_parts=f.name.split("_");
-    var time=(new Date([name_parts[0],"T",name_parts[1].replace(/-/g,":"),"Z"].join("")));
+    var time = Date.parse(f.name);
 
     var reader = new FileReader();
     // Closure to capture the file information.
