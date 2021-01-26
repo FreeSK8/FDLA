@@ -622,52 +622,62 @@ function append_file_content(files_arr){
     }
   }
   if (done){
-    files_arr.sort(compare_filetimes);
-    for (i in files_arr){
-      parse_LogFile(files_arr[i].reader.result)
+    try {
+      files_arr.sort(compare_filetimes);
+      for (i in files_arr){
+        parse_LogFile(files_arr[i].reader.result)
+      }
+      //Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
+      data = [Times,InpVoltages,TempMotors,TempPcbs,DutyCycles,MotorCurrents,BatteryCurrents,Speeds,Distances,Altitudes,GPSSpeeds]
+      create_map();
+      create_chart();
+      fill_menu();
+      show_content();
+    } catch (e) {
+      alert("Buggy bug bug. Something is unhappy: " + e);
+      show_upload();
     }
-    //Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
-    data = [Times,InpVoltages,TempMotors,TempPcbs,DutyCycles,MotorCurrents,BatteryCurrents,Speeds,Distances,Altitudes,GPSSpeeds]
-    create_map();
-    create_chart();
-    fill_menu();
-    show_content();
   }
 }
 
 var files;
 function handleFileSelect(evt) {
-  show_loader();
-  files = evt.target.files; // FileList object
-  var files_arr=[]
-  // files is a FileList of File objects. List some properties.
-  var output = [];
-  for (var i = 0, f; f = files[i]; i++) {
-    output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
-                f.size, ' bytes', '</li>');
+  try {
+    show_loader();
+    files = evt.target.files; // FileList object
+    var files_arr=[]
+    // files is a FileList of File objects. List some properties.
+    var output = [];
+    for (var i = 0, f; f = files[i]; i++) {
+      output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
+                  f.size, ' bytes', '</li>');
 
-    // Only process text files
-    console.log("file type: " + f.type);
-    if (!f.type.match('text.*')) {
-      //TODO: why is this not working for andrew
-      //handleError("Error Selecting File: Not a text/csv File")
-      //continue;
+      // Only process text files
+      console.log("file type: " + f.type);
+      if (!f.type.match('text.*')) {
+        //TODO: why is this not working for andrew
+        //handleError("Error Selecting File: Not a text/csv File")
+        //continue;
+      }
+
+      var time = Date.parse(f.name);
+
+      var reader = new FileReader();
+      // Closure to capture the file information.
+      reader.onload = function(e) {
+          append_file_content(files_arr); //todo append
+          //parse_LogFile(e.target.result);
+        };
+
+      // Read in the file
+      reader.readAsText(f);
+      files_arr.push({time: time,reader: reader});
     }
-
-    var time = Date.parse(f.name);
-
-    var reader = new FileReader();
-    // Closure to capture the file information.
-    reader.onload = function(e) {
-        append_file_content(files_arr); //todo append
-        //parse_LogFile(e.target.result);
-      };
-
-    // Read in the file
-    reader.readAsText(f);
-    files_arr.push({time: time,reader: reader});
+    //document.getElementById('file_list').innerHTML = '<ul>' + output.join('') +'</ul>';
+  } catch (e) {
+    alert("Buggy bug bug. Something is unhappy: " + e);
+    show_upload();
   }
-  //document.getElementById('file_list').innerHTML = '<ul>' + output.join('') +'</ul>';
 }
 
 if (window.location.search.length >1){
