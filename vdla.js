@@ -310,134 +310,140 @@ function parse_LogFile(txt){
       continue;
     }
 
-    // Split CSV
-    var values = lines[i].split(",");
+    try {
+      // Split CSV
+      var values = lines[i].split(",");
 
-    // Create array item if necessary
-    if(logEntries[values[0]] == null) {
-      logEntries[values[0]] = {
-        vin: null,
-        tempMotor: null,
-        tempMotor2: null,
-        tempMotor3: null,
-        tempMotor4: null,
-        tempESC: null,
-        tempESC2: null,
-        tempESC3: null,
-        tempESC4: null,
-        dutyCycle: null,
-        currentMotor: null,
-        currentMotor2: null,
-        currentMotor3: null,
-        currentMotor4: null,
-        currentBattery: null,
-        speed: null,
-        eRPM: null,
-        distance: null,
-        eDistance: null,
-        lat: null,
-        lon: null,
-        altitude: null,
-        speedGPS: null,
-        satellites: null,
-        fault: null
-      };
-    }
+      // Create array item if necessary
+      if(logEntries[values[0]] == null) {
+        logEntries[values[0]] = {
+          vin: null,
+          tempMotor: null,
+          tempMotor2: null,
+          tempMotor3: null,
+          tempMotor4: null,
+          tempESC: null,
+          tempESC2: null,
+          tempESC3: null,
+          tempESC4: null,
+          dutyCycle: null,
+          currentMotor: null,
+          currentMotor2: null,
+          currentMotor3: null,
+          currentMotor4: null,
+          currentBattery: null,
+          speed: null,
+          eRPM: null,
+          distance: null,
+          eDistance: null,
+          lat: null,
+          lon: null,
+          altitude: null,
+          speedGPS: null,
+          satellites: null,
+          fault: null
+        };
+      }
 
-    if (values[1] == "values") {
-      var this_esc_id = Number(values[10]);
-      if (first_esc_id == null) {
-        first_esc_id = this_esc_id;
-      }
-      if (this_esc_id == first_esc_id)
-      {
-        logEntries[values[0]]['vin'] = Number(values[2]);
-        logEntries[values[0]]['tempMotor'] = Number(values[3]);
-        logEntries[values[0]]['tempESC'] = Number(values[4]);
-        logEntries[values[0]]['dutyCycle'] = Number(values[5]);
-        logEntries[values[0]]['currentMotor'] = Number(values[6]);
-        logEntries[values[0]]['currentBattery'] = Number(values[7]);
-        logEntries[values[0]]['eRPM'] = Number(values[8]);
-        logEntries[values[0]]['eDistance'] = Number(values[9]);
-      }
-      else
-      {
-        //TODO: multiple ESC mode
-        multi_esc_mode = true;
-      }
-    } else if (values[1] == "position") {
-      logEntries[values[0]]['lat'] = Number(values[2]);
-      logEntries[values[0]]['lon'] = Number(values[3]);
-      logEntries[values[0]]['satellites'] = Number(values[4]);
-      logEntries[values[0]]['altitude'] = Number(values[5]);
-      logEntries[values[0]]['speedGPS'] = Number(values[6]);
-    } else if (values[1] == "gps") {
-      //dt,gps,satellites,altitude,speed,latitude,longitude
-      logEntries[values[0]]['lat'] = Number(values[5]);
-      logEntries[values[0]]['lon'] = Number(values[6]);
-      logEntries[values[0]]['satellites'] = Number(values[2]);
-      logEntries[values[0]]['altitude'] = Number(values[3]);
-      logEntries[values[0]]['speedGPS'] = Math.abs(Number(values[4])); //TODO: abs is a patch
-    } else if (values[1] == "esc") {
-      //0 ,1  ,2     ,3      ,4         ,5       ,6         ,7            ,8              ,9         ,10              ,11   ,12        ,13   ,14       ,15
-      //dt,esc,esc_id,voltage,motor_temp,esc_temp,duty_cycle,motor_current,battery_current,watt_hours,watt_hours_regen,e_rpm,e_distance,fault,speed_kph,distance_km
-
-      var this_esc_id = Number(values[2]);
-      if (first_esc_id == null) {
-        first_esc_id = this_esc_id;
-        esc_ids.push(this_esc_id);
-      }
-      if (this_esc_id == first_esc_id)
-      {
-        logEntries[values[0]]['vin'] = Number(values[3]);
-        logEntries[values[0]]['tempMotor'] = Number(values[4]);
-        logEntries[values[0]]['tempESC'] = Number(values[5]);
-        logEntries[values[0]]['dutyCycle'] = Number(values[6]);
-        logEntries[values[0]]['currentMotor'] = Number(values[7]);
-        logEntries[values[0]]['currentBattery'] = Number(values[8]);
-        logEntries[values[0]]['eRPM'] = Number(values[11]);
-        logEntries[values[0]]['eDistance'] = Number(values[12]);
-        logEntries[values[0]]['fault'] = Number(values[13]);
-        logEntries[values[0]]['speed'] = Number(values[14]);
-        logEntries[values[0]]['distance'] = Number(values[15]);
-      }
-      else
-      {
-        //TODO: multiple ESC mode
-        multi_esc_mode = true;
-
-        if (!esc_ids.includes(this_esc_id)) 
+      if (values[1] == "values") {
+        var this_esc_id = Number(values[10]);
+        if (first_esc_id == null) {
+          first_esc_id = this_esc_id;
+        }
+        if (this_esc_id == first_esc_id)
         {
+          logEntries[values[0]]['vin'] = Number(values[2]);
+          logEntries[values[0]]['tempMotor'] = Number(values[3]);
+          logEntries[values[0]]['tempESC'] = Number(values[4]);
+          logEntries[values[0]]['dutyCycle'] = Number(values[5]);
+          logEntries[values[0]]['currentMotor'] = Number(values[6]);
+          logEntries[values[0]]['currentBattery'] = Number(values[7]);
+          logEntries[values[0]]['eRPM'] = Number(values[8]);
+          logEntries[values[0]]['eDistance'] = Number(values[9]);
+        }
+        else
+        {
+          //TODO: multiple ESC mode
+          multi_esc_mode = true;
+        }
+      } else if (values[1] == "position") {
+        logEntries[values[0]]['lat'] = Number(values[2]);
+        logEntries[values[0]]['lon'] = Number(values[3]);
+        logEntries[values[0]]['satellites'] = Number(values[4]);
+        logEntries[values[0]]['altitude'] = Number(values[5]);
+        logEntries[values[0]]['speedGPS'] = Number(values[6]);
+      } else if (values[1] == "gps") {
+        //dt,gps,satellites,altitude,speed,latitude,longitude
+        logEntries[values[0]]['lat'] = Number(values[5]);
+        logEntries[values[0]]['lon'] = Number(values[6]);
+        logEntries[values[0]]['satellites'] = Number(values[2]);
+        logEntries[values[0]]['altitude'] = Number(values[3]);
+        logEntries[values[0]]['speedGPS'] = Math.abs(Number(values[4])); //TODO: abs is a patch
+      } else if (values[1] == "esc") {
+        //0 ,1  ,2     ,3      ,4         ,5       ,6         ,7            ,8              ,9         ,10              ,11   ,12        ,13   ,14       ,15
+        //dt,esc,esc_id,voltage,motor_temp,esc_temp,duty_cycle,motor_current,battery_current,watt_hours,watt_hours_regen,e_rpm,e_distance,fault,speed_kph,distance_km
+
+        var this_esc_id = Number(values[2]);
+        if (first_esc_id == null) {
+          first_esc_id = this_esc_id;
           esc_ids.push(this_esc_id);
         }
-
-        switch(esc_ids.findIndex(this_esc_id))
+        if (this_esc_id == first_esc_id)
         {
-          case 0:
-            console.log("Error: ESC ID is first in array");
-          break;
-          case 1:
-            logEntries[values[0]]['tempMotor2'] = Number(values[4]);
-            logEntries[values[0]]['tempESC2'] = Number(values[5]);
-            logEntries[values[0]]['currentMotor2'] = Number(values[7]);
-          break;
-          case 2:
-            logEntries[values[0]]['tempMotor2'] = Number(values[4]);
-            logEntries[values[0]]['tempESC2'] = Number(values[5]);
-            logEntries[values[0]]['currentMotor2'] = Number(values[7]);
-          break;
-          case 3:
-            quad_esc_mode = true;
-            logEntries[values[0]]['tempMotor2'] = Number(values[4]);
-            logEntries[values[0]]['tempESC2'] = Number(values[5]);
-            logEntries[values[0]]['currentMotor2'] = Number(values[7]);
-          break;
-          default:
-            console.log("Error: Too many ESC IDs in data set");
+          logEntries[values[0]]['vin'] = Number(values[3]);
+          logEntries[values[0]]['tempMotor'] = Number(values[4]);
+          logEntries[values[0]]['tempESC'] = Number(values[5]);
+          logEntries[values[0]]['dutyCycle'] = Number(values[6]);
+          logEntries[values[0]]['currentMotor'] = Number(values[7]);
+          logEntries[values[0]]['currentBattery'] = Number(values[8]);
+          logEntries[values[0]]['eRPM'] = Number(values[11]);
+          logEntries[values[0]]['eDistance'] = Number(values[12]);
+          logEntries[values[0]]['fault'] = Number(values[13]);
+          logEntries[values[0]]['speed'] = Number(values[14]);
+          logEntries[values[0]]['distance'] = Number(values[15]);
         }
+        else
+        {
+          //TODO: multiple ESC mode
+          multi_esc_mode = true;
+
+          if (!esc_ids.includes(this_esc_id)) 
+          {
+            console.log("adding multi esc id");
+            esc_ids.push(this_esc_id);
+          }
+
+          switch(esc_ids.indexOf(this_esc_id))
+          {
+            case 0:
+              console.log("Error: ESC ID is first in array");
+            break;
+            case 1:
+              logEntries[values[0]]['tempMotor2'] = Number(values[4]);
+              logEntries[values[0]]['tempESC2'] = Number(values[5]);
+              logEntries[values[0]]['currentMotor2'] = Number(values[7]);
+            break;
+            case 2:
+              logEntries[values[0]]['tempMotor2'] = Number(values[4]);
+              logEntries[values[0]]['tempESC2'] = Number(values[5]);
+              logEntries[values[0]]['currentMotor2'] = Number(values[7]);
+            break;
+            case 3:
+              quad_esc_mode = true;
+              logEntries[values[0]]['tempMotor2'] = Number(values[4]);
+              logEntries[values[0]]['tempESC2'] = Number(values[5]);
+              logEntries[values[0]]['currentMotor2'] = Number(values[7]);
+            break;
+            default:
+              console.log("Error: Too many ESC IDs in data set");
+          }
+        }
+      } else {
+        console.log("unepxected data:\n"+lines[i])
       }
-    } else {
-      console.log("unepxected data:\n"+lines[i])
+    } catch (e) {
+      console.log("parse_LogFile: exception");
+      console.log(e);
     }
   } // i in lines
 
@@ -568,7 +574,9 @@ function append_file_content(files_arr){
 
       files_arr.sort(compare_filetimes);
       for (i in files_arr){
-        parse_LogFile(files_arr[i].reader.result)
+        console.log("hi");
+        parse_LogFile(files_arr[i].reader.result);
+        console.log("bye");
       }
 
       create_map();
