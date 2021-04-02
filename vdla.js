@@ -270,7 +270,7 @@ function drawChart() {
 
   // add a mouseover event handler to highlight the bar
   google.visualization.events.addListener(chart, 'onmouseover', function (e) {
-    console.log("on mouse over");
+    //console.log("on mouse over");
     try {
       debug = e;
       var value = gDataTable.getValue(e.row, 0);
@@ -294,7 +294,7 @@ function drawChart() {
   
   // add a mouseout event handler to clear highlighting
   google.visualization.events.addListener(chart, 'onmouseout', function () {
-      console.log("on mouse out");
+      //console.log("on mouse out");
   });
 
   chart.draw(gDataTable, options);
