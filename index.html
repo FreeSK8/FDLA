@@ -5,16 +5,40 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="uPlot/dist/uPlot.min.css">
-  <script src="uPlot/dist/uPlot.iife.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
-  integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
-  crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
-  integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
-  crossorigin=""></script>
+  <style type="text/css">
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #mapid {
+        height: 100%;
+      }
 
+      /* Optional: Makes the sample page fill the window. */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script>
+      "use strict";
+
+      var map;
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById("mapid"), {
+          center: {
+            lat: 0,
+            lng: 0,
+          },
+          zoom: 3,
+        });
+      }
+    </script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <link rel="stylesheet" type="text/css" href="vdla.css">
 
 </head>
@@ -44,9 +68,14 @@
         </div>
       </div>
       <div id="mapid"></div>
+
+      <!-- Async script executes immediately and must be after any DOM elements used in callback. -->
+      <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIwzALxUPNbatRBj3Xi1Uhp0fFzwWNBkE&callback=initMap&libraries=&v=weekly"
+        async
+      ></script>
       <div id="chart_container">
-        <div id="chart" class="chartclass"></div>
-        <span id="uplot_creds"><a href="https://github.com/leeoniya/uPlot" title="A small fast chart for time series, lines, areas, ohlc & bars">uPlot</a></span>
+        <div id="curve_chart" style="height: 100%"></div>
       </div>
       <output id="file_list"></output>
       <output id="settings_list"></output>

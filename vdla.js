@@ -1,163 +1,43 @@
-//DateTime, Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
-var units=["V","°C","°C","%","A","A","e","e","m","km/h"]
-var axes_names=units.filter(function(item, pos, self) {
-    return self.indexOf(item) == pos;
-})
-var colors=["blue","red","orange","green","purple","fuchsia","white","yellow","darkcyan", "gold"]
-var fill=["rgba(0, 0, 255, 0.2)","rgba(255, 0, 0, 0.2)","rgba(255, 165, 0, 0.2)","rgba(0, 255, 0, 0.2)","rgba(128, 0, 128, 0.2)","rgba(255, 0, 255, 0.2)","rgba(255, 255, 255, 0.2)","rgba(255, 255, 0, 0.0)","rgba(0, 139, 139, 0.2)","rgba(255, 215, 0, 0.2)"]
-var series_shown=[true,true,true,false,true,false,false,false,false,true];
-var Times=[];
-var TempPcbs=[];
-var TempMotors=[];
-var MotorCurrents=[];
-var BatteryCurrents=[];
-var DutyCycles=[];
-var Speeds=[];
-var InpVoltages=[];
-//var AmpHours=[];
-//var AmpHoursCharged=[];
-//var WattHours=[];
-//var WattHoursCharged=[];
-var Distances=[];
-var Powers=[];
-var Faults=[];
-//var TimePassedInMss=[];
-var latlngs=[];
-var Altitudes=[];
-var GPSSpeeds=[];
-var names = [];
-var data = [];
-var curr_plot_indx=0;
-var curr_map_indx=0;
+var debug;
+
+//create trigger to resizeEnd event     
+$(window).resize(function() {
+    if(this.resizeTO) clearTimeout(this.resizeTO);
+    this.resizeTO = setTimeout(function() {
+        $(this).trigger('resizeEnd');
+    }, 500);
+});
+
+//redraw graph when window resize is completed  
+$(window).on('resizeEnd', function() {
+    drawChart();
+});
+
+//Chart
+var chart;
+var gChartData = [];
+var gDataTable;
+
+//Map
 var map;
-var uplot;
+var rideCoordinates = [];
+var infowindowChartSelection;
+var infowindowRouteHover;
+var markerChartSelection;
+var markerChartHover;
+
+//Old
 var menu_visible=false;
 var map_popup;
+
+//Parsing
+var parsedLogEntries = [];
 var first_esc_id = null;
 var multi_esc_mode = false;
-
-//uplot plugins
-function touchZoomPlugin(opts) {
-  function init(u, opts, data) {
-    let plot = u.root.querySelector(".u-over");
-    let rect, oxRange, oyRange, xVal, yVal;
-    let fr = {x: 0, y: 0, dx: 0, dy: 0};
-    let to = {x: 0, y: 0, dx: 0, dy: 0};
-
-    function storePos(t, e) {
-      let ts = e.touches;
-
-      let t0 = ts[0];
-      let t0x = t0.clientX - rect.left;
-      let t0y = t0.clientY - rect.top;
-
-      if (ts.length == 1) {
-        t.x = t0x;
-        t.y = t0y;
-        t.d = 0;
-      }
-      else {
-        let t1 = e.touches[1];
-        let t1x = t1.clientX - rect.left;
-        let t1y = t1.clientY - rect.top;
-
-        let xMin = Math.min(t0x, t1x);
-        let yMin = Math.min(t0y, t1y);
-        let xMax = Math.max(t0x, t1x);
-        let yMax = Math.max(t0y, t1y);
-
-        // midpts
-        t.y = (yMin+yMax)/2;
-        t.x = (xMin+xMax)/2;
-
-        t.dx = xMax - xMin;
-        t.dy = yMax - yMin;
-
-        // dist
-        t.d = Math.sqrt(t.dx * t.dx + t.dy * t.dy);
-      }
-    }
-
-    let rafPending = false;
-
-    function zoom() {
-      rafPending = false;
-
-      let left = to.x;
-      let top = to.y;
-
-      // non-uniform scaling
-    //  let xFactor = fr.dx / to.dx;
-    //  let yFactor = fr.dy / to.dy;
-
-      // uniform x/y scaling
-      let xFactor = fr.d / to.d;
-      let yFactor = fr.d / to.d;
-
-      let leftPct = left/rect.width;
-      let btmPct = 1 - top/rect.height;
-
-      let nxRange = oxRange * xFactor;
-      let nxMin = xVal - leftPct * nxRange;
-      let nxMax = nxMin + nxRange;
-
-      let nyRange = oyRange * yFactor;
-      let nyMin = yVal - btmPct * nyRange;
-      let nyMax = nyMin + nyRange;
-
-      u.batch(() => {
-        u.setScale("x", {
-          min: nxMin,
-          max: nxMax,
-        });
-
-        u.setScale("y", {
-          min: nyMin,
-          max: nyMax,
-        });
-      });
-    }
-
-    function touchmove(e) {
-      storePos(to, e);
-
-      if (!rafPending) {
-        rafPending = true;
-        requestAnimationFrame(zoom);
-      }
-    }
-
-    plot.addEventListener("touchstart", function(e) {
-      rect = plot.getBoundingClientRect();
-
-      storePos(fr, e);
-
-      oxRange = u.scales.x.max - u.scales.x.min;
-      oyRange = u.scales.y.max - u.scales.y.min;
-
-      let left = fr.x;
-      let top = fr.y;
-
-      xVal = u.posToVal(left, "x");
-      yVal = u.posToVal(top, "y");
-
-      document.addEventListener("touchmove", touchmove, {passive: true});
-    });
-
-    plot.addEventListener("touchend", function(e) {
-      document.removeEventListener("touchmove", touchmove, {passive: true});
-    });
-  }
-
-  return {
-    hooks: {
-      init
-    }
-  };
-}
+var quad_esc_mode = false;
+var esc_ids = [];
 
 //utils
-
 function compare_filetimes(a, b) {
   if (a.time > b.time) return 1;
   if (b.time > a.time) return -1;
@@ -249,273 +129,179 @@ function menu_click(e){
   }
 }
 
-function cb_change(e){
-  if (event.target.checked) {
-    var i = names.indexOf(e.target.id.substr(3))
-    uplot.setSeries((i+1),{show:true})
-    series_shown[i]=true;
-  } else {
-    var i = names.indexOf(e.target.id.substr(3))
-    uplot.setSeries((i+1),{show:false})
-    series_shown[i]=false;
-  }
-}
 
-function fill_menu(){
-  for (var i in names){
-    i=parseInt(i);
-    var li=document.createElement('li');
-
-    var checkbox = document.createElement('input');
-    checkbox.type = "checkbox";
-    checkbox.id= "cb_"+names[i];
-    checkbox.addEventListener('change',cb_change);
-
-    var label = document.createElement('label')
-    label.htmlFor = "cb_"+names[i];
-    label.appendChild(document.createTextNode(names[i]));
-
-    li.appendChild(checkbox);
-    li.appendChild(label);
-    document.getElementById('menu_list').appendChild(li);
-    if (series_shown[i]){
-      checkbox.checked = true;
-      uplot.setSeries((i+1),{show:true})
-    } else {
-      checkbox.checked = false;
-      uplot.setSeries((i+1),{show:false});
+function zoomToObject(obj){
+    var bounds = new google.maps.LatLngBounds();
+    var points = obj.getPath().getArray();
+    for (var n = 0; n < points.length ; n++){
+        bounds.extend(points[n]);
     }
-  }
-}
-
-function find_closest_ind(coord){
-  var closest_ind=0;
-  var closest_distance=9999999;
-  for (var i in latlngs){
-    var dist = coord.distanceTo(latlngs[i])
-    if (dist < closest_distance){
-      closest_distance=dist;
-      closest_ind=i;
-    }
-  }
-  if (closest_distance<200){
-    return closest_ind;
-  }
-  return -1;
+    map.fitBounds(bounds);
 }
 
 function create_map(){
 
-  var LatLons = [];
-  for (var i in latlngs) {
-    if (latlngs[i][0] != null) {
-      LatLons.push(latlngs[i]);
-    }
-  }
+  map = new google.maps.Map(document.getElementById("mapid"), {
+          center: {
+            lat: 37.772,
+            lng: -122.214,
+          },
+          zoom: 8,
+        });
 
-  map = L.map('mapid').setView(LatLons[0], 13);
-  var map1 = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-      maxZoom: 21,
-      id: 'mapbox/streets-v11',
-      tileSize: 512,
-      zoomOffset: -1,
-      accessToken: 'pk.eyJ1IjoieW94Y3UiLCJhIjoiY2s4c21scW8yMDB6MzNkbndlYXpraTEwdSJ9.VGfekLj7rTAtlifcuD4Buw'
-  }).addTo(map);
-  
-  var map2 = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-      maxZoom: 21,
-      id: 'mapbox/satellite-streets-v11',
-      tileSize: 512,
-      zoomOffset: -1,
-      accessToken: 'pk.eyJ1IjoieW94Y3UiLCJhIjoiY2s4c21scW8yMDB6MzNkbndlYXpraTEwdSJ9.VGfekLj7rTAtlifcuD4Buw'
-  }).addTo(map);
-  L.control.layers({  
-    "Satellite": map2,
-    "Street": map1,
-  }, null).addTo(map);
+  infowindowRouteHover = new google.maps.InfoWindow({
+              content: "",
+            });
 
-  var polyline = L.polyline(LatLons, {color: 'blue'}).addTo(map);
-  // zoom the map to the polyline
-  map.fitBounds(polyline.getBounds());
-
-  map.on('mousemove', function(e){
-    var closest_ind = find_closest_ind(e.latlng);
-    update_map_popup(closest_ind);
-    adjust_plot_pos(closest_ind);
+  const routePath = new google.maps.Polyline({
+    path: rideCoordinates,
+    geodesic: true,
+    strokeColor: "#FF00FF",
+    strokeOpacity: 1.0,
+    strokeWeight: 4,
   });
-}
+  routePath.setMap(map);
+  google.maps.event.addListener(routePath, 'click', function() {
+    debug = routePath;
+    console.log(routePath);
+    // TODO: idk yet
+  });
+  // Route Hover InfoWindow
+  google.maps.event.addListener(routePath, 'mouseover', function(e) {
+    debug = e;
+    infowindowRouteHover.setPosition(e.latLng);
+    infowindowRouteHover.setContent("You are at " + e.latLng);
+    infowindowRouteHover.open(map);
+  });
+  // Route Hover InfoWindow
+  google.maps.event.addListener(routePath, 'mouseout', function() {
+      infowindowRouteHover.close();
+  });
 
-function update_map_popup(indx){
-  if (indx != -1 && curr_map_indx != indx){
-    var content= []
-    for (var i in series_shown){
-      if (series_shown[i]){
-        content=content.concat([
-          names[i],
-          ": ",
-          data[parseInt(i)+1][indx],
-          units[i],
-          "<br>"
-        ]);
-      }
-    }
-    content.pop()
-    if (map_popup == null){
-      map_popup = L.popup()
-        .setLatLng(latlngs[indx])
-        .setContent(content.join(""))
-        .openOn(map);
-    } else {
-      map_popup.setLatLng(latlngs[indx])
-      .setContent(content.join(""))
-      .update()
-    }
-    curr_map_indx=indx;
-  }
-}
-
-function adjust_plot_pos(indx){
-  if (indx != -1 && curr_plot_indx != indx){
-    var time = Times[indx];
-    var curr_plot_indx = indx;
-    var view_width=uplot.scales.x.max-uplot.scales.x.min;
-    var new_min=time-view_width/2;
-    var new_max=time+view_width/2;
-    if (new_min < Times[0]){
-      new_min=Times[0];
-      new_max=new_min+view_width;
-    }else if (new_max > Times[Times.length-1]) {
-      new_max=Times[Times.length-1];
-      new_min=new_max-view_width;
-    }
-    var new_cursor_left=(time-new_min)/(view_width)*uplot.bbox.width;
-    uplot.setScale("x",{min:new_min,max:new_max});
-    uplot.setCursor({left:new_cursor_left,top:0})
-  }
-}
-
-function generate_series(){
-  var series=[{}];
-  for (i in names){
-    var digit=2;
-    switch (names[i]){
-      case "DutyCycle":
-      case "Altitude":
-      case "Power":
-        digit=0;
-    }
-    series.push({
-      // initial toggled state (optional)
-      show: true,
-      spanGaps: true,
-      // in-legend display
-      label: names[i],
-      value:  (function() {
-        var j = i; // j is a copy of i only available to the scope of the inner function
-        var digit_save=digit;
-        return function(self,rawValue) {
-          if (rawValue != null) {
-            return rawValue.toFixed(digit_save) + units[j];
-          }
-        }
-      })(),
-      scale: units[i],
-
-      // series style
-      stroke: colors[i],
-      width: 2,
-      fill: fill[i],
-      //dash: [10, 5],
-    });
-  }
-  return series;
-}
-
-function generate_axes(show){
-  var axes=[{}]
-  for (i in axes_names){
-    //1=right 3=left
-    var side = (i%2)*2+1;
-    axes.push(
-      {
-        show: show,
-        scale: axes_names[i],
-        values: (function() {
-          var j = i; // j is a copy of i only available to the scope of the inner function
-          return function(self,ticks) {
-            return ticks.map(rawValue => rawValue + axes_names[j]);
-          }
-        })(),
-        side: side,
-        grid: {show: false},
-      },
-    )
-  }
-  return axes;
-}
-
-function generate_scales(){
-  var scales={};
-  for (var i in axes_names){
-    var curr_min=99999
-    var curr_max=-99999
-    var indxs = getAllIndexes(units,axes_names[i])
-    for (var j in indxs){
-      curr_min=Math.min(curr_min,Math.min(...data[indxs[j]+1]))
-      curr_max=Math.max(curr_max,Math.max(...data[indxs[j]+1]))
-    }
-    scales[axes_names[i]]={
-      auto: false,
-      range: [curr_min,curr_max],
-    }
-  }
-  return scales;
-}
-
-function get_window_size() {
-  var height = document.getElementById("chart").offsetHeight;
-  var legend=document.getElementsByClassName("legend");
-  if (legend.length >0){
-    height=height-legend[0].offsetHeight;
-  }else{
-    height=height*0.8
-  }
-  return {
-    width: document.getElementById("chart").offsetWidth,
-    height: height,
-  }
+  zoomToObject(routePath);
 }
 
 function create_chart(){
-  var opts = {
-    id: "plot",
-    class: "chartclass",
-    ...get_window_size(),
-    plugins: [
-      touchZoomPlugin()
-    ],
-    cursor: {
-      y:false,
+  google.charts.load('current', {'packages':['corechart']});
+  google.charts.setOnLoadCallback(drawChart);
+}
+
+function selectHandler() {
+        var selectedItem = chart.getSelection()[0];
+        var value = gDataTable.getValue(selectedItem.row, 0);
+        console.log('The user selected ' + value);
+
+        console.log(parsedLogEntries[value]);
+        try {
+          map.setCenter({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+          map.setZoom(20);
+
+          var data = parsedLogEntries[value];
+          var infoWindowString = `Renee is awesome for doing this!
+          <br/>VIN: ${data.vin}
+          <br/>tempMotor: ${data.tempMotor}
+          <br/>tempESC: ${data.tempESC}
+          <br/>dutyCycle: ${data.dutyCycle}
+          <br/>currentMotor: ${data.currentMotor}
+          <br/>currentBattery: ${data.currentBattery}
+          <br/>altitude: ${data.altitude}
+          <br/>speedGPS: ${data.speedGPS}
+          <br/>eRPM: ${data.eRPM}
+          <br/>eDistance: ${data.eDistance}
+          <br/>distance_km: ${data.distance}
+          <br/>speed_kph: ${data.speed}`;
+          if (markerChartSelection == null) {
+            infowindowChartSelection = new google.maps.InfoWindow({
+              content: infoWindowString,
+            });
+            markerChartSelection = new google.maps.Marker({
+              position: {lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon},
+              map,
+              title: "Curent Location",
+            });
+            markerChartSelection.addListener("click", () => {
+              infowindowChartSelection.open(map, markerChartSelection);
+            });
+            infowindowChartSelection.open(map, markerChartSelection);
+          } else {
+            infowindowChartSelection.setContent(infoWindowString);
+            markerChartSelection.setPosition({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+            infowindowChartSelection.open(map, markerChartSelection);
+          }
+          
+        } catch (e) {
+          console.log(e);
+        }
+      }
+
+function drawChart() {
+  gDataTable = google.visualization.arrayToDataTable(gChartData);
+
+  var options = {
+    //title: 'ESK8 Data',
+    curveType: 'function',
+    legend: { position: 'bottom' },
+    vAxis: {
+        title: 'FreeSK8 Rocks!',
+        viewWindowMode: 'explicit',
+        //viewWindow: {
+            //max: 180,
+            //min: 0,
+            //interval: 1,
+        //},
     },
-    series: generate_series(),
-    axes: generate_axes(false),
-    scales: generate_scales(),
+    hAxis: {
+      viewWindow:{
+          interval: 10,
+      }
+    },
+    explorer: { 
+      actions: ['dragToZoom', 'rightClickToReset'],
+      axis: 'horizontal',
+      keepInBounds: true,
+      maxZoomIn: 4.0
+    },
+    focusTarget: 'category'
   };
 
-  uplot = new uPlot(opts, data, document.getElementById("chart"));
-  document.getElementById("chart").addEventListener("mousemove", e => {
-    if (uplot.cursor.idx != null && curr_plot_indx != uplot.cursor.idx){
-      curr_plot_indx=uplot.cursor.idx;
-      update_map_popup(curr_plot_indx);
+  chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+  google.visualization.events.addListener(chart, 'select', selectHandler);
+
+  // add a mouseover event handler to highlight the bar
+  google.visualization.events.addListener(chart, 'onmouseover', function (e) {
+    console.log("on mouse over");
+    try {
+      debug = e;
+      var value = gDataTable.getValue(e.row, 0);
+
+      if (markerChartHover == null) {
+        
+        markerChartHover = new google.maps.Marker({
+          position: {lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon},
+          map,
+          title: "Curent Location",
+        });
+      } else {
+        markerChartHover.setPosition({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+      }
+
+      map.setCenter({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+    } catch (e) {
+      console.log(e);
     }
   });
-  uplot.setSize(get_window_size());
+  
+  // add a mouseout event handler to clear highlighting
+  google.visualization.events.addListener(chart, 'onmouseout', function () {
+      console.log("on mouse out");
+  });
+
+  chart.draw(gDataTable, options);
 }
 
 function parse_LogFile(txt){
-  var logEntries = {};
+  var logEntries = [];
   var lines = txt.split("\n");
   names="Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, Altitude, Speed".split(",");
   for (var i in lines) {
@@ -529,7 +315,33 @@ function parse_LogFile(txt){
 
     // Create array item if necessary
     if(logEntries[values[0]] == null) {
-      logEntries[values[0]] = {vin: null, tempMotor: null, tempESC: null, dutyCycle: null, currentMotor: null, currentBattery: null, speed: null, distance: null, lat: null, lon: null, altitude: null, speedGPS: null, satellites: null};
+      logEntries[values[0]] = {
+        vin: null,
+        tempMotor: null,
+        tempMotor2: null,
+        tempMotor3: null,
+        tempMotor4: null,
+        tempESC: null,
+        tempESC2: null,
+        tempESC3: null,
+        tempESC4: null,
+        dutyCycle: null,
+        currentMotor: null,
+        currentMotor2: null,
+        currentMotor3: null,
+        currentMotor4: null,
+        currentBattery: null,
+        speed: null,
+        eRPM: null,
+        distance: null,
+        eDistance: null,
+        lat: null,
+        lon: null,
+        altitude: null,
+        speedGPS: null,
+        satellites: null,
+        fault: null
+      };
     }
 
     if (values[1] == "values") {
@@ -545,8 +357,8 @@ function parse_LogFile(txt){
         logEntries[values[0]]['dutyCycle'] = Number(values[5]);
         logEntries[values[0]]['currentMotor'] = Number(values[6]);
         logEntries[values[0]]['currentBattery'] = Number(values[7]);
-        logEntries[values[0]]['speed'] = Number(values[8]);
-        logEntries[values[0]]['distance'] = Number(values[9]);
+        logEntries[values[0]]['eRPM'] = Number(values[8]);
+        logEntries[values[0]]['eDistance'] = Number(values[9]);
       }
       else
       {
@@ -567,10 +379,13 @@ function parse_LogFile(txt){
       logEntries[values[0]]['altitude'] = Number(values[3]);
       logEntries[values[0]]['speedGPS'] = Math.abs(Number(values[4])); //TODO: abs is a patch
     } else if (values[1] == "esc") {
-      //dt,esc,esc_id,voltage,motor_temp,esc_temp,duty_cycle,motor_current,battery_current,watt_hours,watt_hours_regen,e_rpm,e_distance,fault
+      //0 ,1  ,2     ,3      ,4         ,5       ,6         ,7            ,8              ,9         ,10              ,11   ,12        ,13   ,14       ,15
+      //dt,esc,esc_id,voltage,motor_temp,esc_temp,duty_cycle,motor_current,battery_current,watt_hours,watt_hours_regen,e_rpm,e_distance,fault,speed_kph,distance_km
+
       var this_esc_id = Number(values[2]);
       if (first_esc_id == null) {
         first_esc_id = this_esc_id;
+        esc_ids.push(this_esc_id);
       }
       if (this_esc_id == first_esc_id)
       {
@@ -580,34 +395,158 @@ function parse_LogFile(txt){
         logEntries[values[0]]['dutyCycle'] = Number(values[6]);
         logEntries[values[0]]['currentMotor'] = Number(values[7]);
         logEntries[values[0]]['currentBattery'] = Number(values[8]);
-        logEntries[values[0]]['speed'] = Number(values[11]);
-        logEntries[values[0]]['distance'] = Number(values[12]);
+        logEntries[values[0]]['eRPM'] = Number(values[11]);
+        logEntries[values[0]]['eDistance'] = Number(values[12]);
+        logEntries[values[0]]['fault'] = Number(values[13]);
+        logEntries[values[0]]['speed'] = Number(values[14]);
+        logEntries[values[0]]['distance'] = Number(values[15]);
       }
       else
       {
         //TODO: multiple ESC mode
         multi_esc_mode = true;
+
+        if (!esc_ids.includes(this_esc_id)) 
+        {
+          esc_ids.push(this_esc_id);
+        }
+
+        switch(esc_ids.findIndex(this_esc_id))
+        {
+          case 0:
+            console.log("Error: ESC ID is first in array");
+          break;
+          case 1:
+            logEntries[values[0]]['tempMotor2'] = Number(values[4]);
+            logEntries[values[0]]['tempESC2'] = Number(values[5]);
+            logEntries[values[0]]['currentMotor2'] = Number(values[7]);
+          break;
+          case 2:
+            logEntries[values[0]]['tempMotor2'] = Number(values[4]);
+            logEntries[values[0]]['tempESC2'] = Number(values[5]);
+            logEntries[values[0]]['currentMotor2'] = Number(values[7]);
+          break;
+          case 3:
+            quad_esc_mode = true;
+            logEntries[values[0]]['tempMotor2'] = Number(values[4]);
+            logEntries[values[0]]['tempESC2'] = Number(values[5]);
+            logEntries[values[0]]['currentMotor2'] = Number(values[7]);
+          break;
+          default:
+            console.log("Error: Too many ESC IDs in data set");
+        }
       }
     } else {
       console.log("unepxected data:\n"+lines[i])
     }
   } // i in lines
 
-  // Prepare for uPlot
+  // Prepare for gChart
+  if (multi_esc_mode && quad_esc_mode)
+  {
+    gChartData = [['datetime',
+        'vin',
+        'tempMotor',
+        'tempMotor2',
+        'tempMotor3',
+        'tempMotor4',
+        'tempESC',
+        'tempESC2',
+        'tempESC3',
+        'tempESC4',
+        'dutyCycle',
+        'currentMotor',
+        'currentMotor2',
+        'currentMotor3',
+        'currentMotor4',
+        'currentBattery',
+        'altitude',
+        'speedGPS']];
+  }
+  else if (multi_esc_mode)
+  {
+    gChartData = [['datetime',
+        'vin',
+        'tempMotor',
+        'tempMotor2',
+        'tempESC',
+        'tempESC2',
+        'dutyCycle',
+        'currentMotor',
+        'currentMotor2',
+        'currentBattery',
+        'altitude',
+        'speedGPS']];
+  }
+  else
+  {
+    gChartData = [['datetime',
+        'vin',
+        'tempMotor',
+        'tempESC',
+        'dutyCycle',
+        'currentMotor',
+        'currentBattery',
+        'altitude',
+        'speedGPS']];
+  }
+
+  // Iterate parsed log
   for (const [key, value] of Object.entries(logEntries)) {
     if(value.vin != null) {
-      Times.push((new Date([key,"Z"].join(""))).getTime()/1000);
-      InpVoltages.push(value.vin);
-      TempMotors.push(value.tempMotor);
-      TempPcbs.push(value.tempESC);
-      DutyCycles.push(value.dutyCycle);
-      MotorCurrents.push(value.currentMotor);
-      BatteryCurrents.push(value.currentBattery);
-      Speeds.push(value.speed);
-      Distances.push(value.distance);
-      latlngs.push([value.lat, value.lon]);
-      Altitudes.push(value.altitude);
-      GPSSpeeds.push(value.speedGPS);
+      parsedLogEntries[new Date(key)] = value;
+
+      if (multi_esc_mode && quad_esc_mode) {
+        gChartData.push([
+          new Date(key),
+          value.vin,
+          value.tempMotor,
+          value.tempMotor2,
+          value.tempMotor3,
+          value.tempESC,
+          value.tempESC2,
+          value.tempESC3,
+          value.dutyCycle,
+          value.currentMotor,
+          value.currentMotor2,
+          value.currentMotor3,
+          value.currentBattery,
+          value.altitude,
+          value.speedGPS]
+        );
+      } else if (multi_esc_mode) {
+        gChartData.push([
+          new Date(key),
+          value.vin,
+          value.tempMotor,
+          value.tempMotor2,
+          value.tempESC,
+          value.tempESC2,
+          value.dutyCycle,
+          value.currentMotor,
+          value.currentMotor2,
+          value.currentBattery,
+          value.altitude,
+          value.speedGPS]
+        );
+      } else {
+        gChartData.push([
+          new Date(key),
+          value.vin,
+          value.tempMotor,
+          value.tempESC,
+          value.dutyCycle,
+          value.currentMotor,
+          value.currentBattery,
+          value.altitude,
+          value.speedGPS]
+        );
+      }
+
+      if (value.lat != null) {
+        rideCoordinates.push({ lat: value.lat, lng: value.lon });
+      }
+      
     }
   }
 }
@@ -623,15 +562,17 @@ function append_file_content(files_arr){
   }
   if (done){
     try {
+      esc_ids = [];
+      gChartData = [];
+      rideCoordinates = [];
+
       files_arr.sort(compare_filetimes);
       for (i in files_arr){
         parse_LogFile(files_arr[i].reader.result)
       }
-      //Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, ESC ID
-      data = [Times,InpVoltages,TempMotors,TempPcbs,DutyCycles,MotorCurrents,BatteryCurrents,Speeds,Distances,Altitudes,GPSSpeeds]
+
       create_map();
       create_chart();
-      fill_menu();
       show_content();
     } catch (e) {
       alert("Buggy bug bug. Something is unhappy: " + e);
@@ -696,4 +637,4 @@ if (window.location.search.length >1){
   show_upload();
 }
 document.getElementById('files').addEventListener('change', handleFileSelect, false);
-window.addEventListener("resize", throttle(() => uplot.setSize(get_window_size()), 100));
+
