@@ -13,10 +13,48 @@ $(window).on('resizeEnd', function() {
     drawChart();
 });
 
+// Google Chart Colors
+var defaultColors = ['#3366cc',
+'#dc3912',
+'#ff9900',
+'#109618',
+'#990099',
+'#0099c6',
+'#dd4477',
+'#66aa00',
+'#b82e2e',
+'#316395',
+'#994499',
+'#22aa99',
+'#aaaa11',
+'#6633cc',
+'#e67300',
+'#8b0707',
+'#651067',
+'#329262',
+'#5574a6',
+'#3b3eac',
+'#b77322',
+'#16d620',
+'#b91383',
+'#f4359e',
+'#9c5935',
+'#a9c413',
+'#2a778d',
+'#668d1c',
+'#bea413',
+'#0c5922',
+'#743411'];
+
 //Chart
 var chart;
 var gChartData = [];
 var gDataTable;
+
+//Chart toggle series
+var dataView;
+var gChartColumns = [];
+var nullFunc = function() {return 0;};
 
 //Map
 var map;
@@ -197,7 +235,7 @@ function selectHandler() {
           map.setZoom(20);
 
           var data = parsedLogEntries[value];
-          var infoWindowString = `Renee is awesome for doing this!
+          var infoWindowString = `Selected Moment
           <br/>VIN: ${data.vin}
           <br/>tempMotor: ${data.tempMotor}
           <br/>tempESC: ${data.tempESC}
@@ -235,14 +273,73 @@ function selectHandler() {
       }
 
 function drawChart() {
-  gDataTable = google.visualization.arrayToDataTable(gChartData);
+  if (!chart) {
+    gDataTable = google.visualization.arrayToDataTable(gChartData);
+    dataView = new google.visualization.DataView(gDataTable);
+
+    chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+    // Toggle visibility of data series on click of legend.
+    google.visualization.events.addListener(chart, 'click', function (target) {
+      if (target.targetID.match(/^legendentry#\d+$/)) {    
+        var index = parseInt(target.targetID.slice(12)) + 1;
+        console.log(index);
+        gChartColumns[index].visible = !gChartColumns[index].visible;
+        console.log("test");
+        drawChart();
+        console.log("test2");
+      }
+    });
+
+    google.visualization.events.addListener(chart, 'select', selectHandler);
+
+    // add a mouseover event handler to highlight the bar
+    google.visualization.events.addListener(chart, 'onmouseover', function (e) {
+      //console.log("on mouse over");
+      try {
+        debug = e;
+        if (e.row == null) return;
+        var value = gDataTable.getValue(e.row, 0);
+
+        if (markerChartHover == null) {
+          
+          markerChartHover = new google.maps.Marker({
+            position: {lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon},
+            map,
+            title: "Curent Location",
+          });
+        } else {
+          markerChartHover.setPosition({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+        }
+
+        map.setCenter({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+      } catch (e) {
+        console.log(e);
+      }
+    });
+    
+    // add a mouseout event handler to clear highlighting
+    google.visualization.events.addListener(chart, 'onmouseout', function () {
+        //console.log("on mouse out");
+    });
+  }
+  
 
   var options = {
     //title: 'ESK8 Data',
+    backgroundColor: '#27262b', //'#d0cdc9'
+    lineWidth: 3,
+    chartArea: {'width': '100%', 'height': '80%'},
     curveType: 'function',
-    legend: { position: 'bottom' },
+    legend: { 
+      position: 'top',
+      maxLines: 3, 
+      textStyle: {
+        color: '#e6e1e8'
+      }
+    },
     vAxis: {
-        title: 'FreeSK8 Rocks!',
+        title: '',
         viewWindowMode: 'explicit',
         //viewWindow: {
             //max: 180,
@@ -253,6 +350,9 @@ function drawChart() {
     hAxis: {
       viewWindow:{
           interval: 10,
+      },
+      gridlines: {
+        color: '#353535'
       }
     },
     explorer: { 
@@ -264,40 +364,31 @@ function drawChart() {
     focusTarget: 'category'
   };
 
-  chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
-
-  google.visualization.events.addListener(chart, 'select', selectHandler);
-
-  // add a mouseover event handler to highlight the bar
-  google.visualization.events.addListener(chart, 'onmouseover', function (e) {
-    //console.log("on mouse over");
-    try {
-      debug = e;
-      var value = gDataTable.getValue(e.row, 0);
-
-      if (markerChartHover == null) {
-        
-        markerChartHover = new google.maps.Marker({
-          position: {lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon},
-          map,
-          title: "Curent Location",
-        });
-      } else {
-        markerChartHover.setPosition({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
-      }
-
-      map.setCenter({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
-    } catch (e) {
-      console.log(e);
-    }
-  });
   
-  // add a mouseout event handler to clear highlighting
-  google.visualization.events.addListener(chart, 'onmouseout', function () {
-      //console.log("on mouse out");
-  });
 
-  chart.draw(gDataTable, options);
+  // Set series visibility
+  var visibleColumnIndexes = [0];
+  var colors = [];
+
+  for (var i = 1; i < gChartColumns.length; i++) {
+    if (gChartColumns[i].visible) {
+      colors.push(gChartColumns[i].color);
+
+      visibleColumnIndexes.push(i);
+    }
+    else {
+      colors.push("#4c4c4c");
+
+      visibleColumnIndexes.push({
+        calc: nullFunc,
+        type: gChartColumns[i].type,
+        label: gChartColumns[i].label,
+      });
+    }
+  };
+  dataView.setColumns(visibleColumnIndexes);
+  options.colors = colors;
+  chart.draw(dataView, options);
 }
 
 function parse_LogFile(txt){
@@ -468,6 +559,114 @@ function parse_LogFile(txt){
         'currentBattery',
         'altitude',
         'speedGPS']];
+    gChartColumns = [
+      {
+        type: 'number',
+        label: 'datetime'
+      },
+      {
+        type: 'number',
+        label: 'vin',
+        color: defaultColors[0],
+        visible: true
+      },
+      {
+        type: 'number',
+        label: 'tempMotor',
+        color: defaultColors[1],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempMotor2',
+        color: defaultColors[2],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempMotor3',
+        color: defaultColors[3],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempMotor4',
+        color: defaultColors[4],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC',
+        color: defaultColors[5],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC2',
+        color: defaultColors[6],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC3',
+        color: defaultColors[7],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC4',
+        color: defaultColors[8],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'dutyCycle',
+        color: defaultColors[9],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor',
+        color: defaultColors[10],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor2',
+        color: defaultColors[11],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor3',
+        color: defaultColors[12],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor4',
+        color: defaultColors[13],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentBattery',
+        color: defaultColors[14],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'altitude',
+        color: defaultColors[15],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[16],
+        visible: true,
+      }
+    ];
   }
   else if (multi_esc_mode)
   {
@@ -483,6 +682,78 @@ function parse_LogFile(txt){
         'currentBattery',
         'altitude',
         'speedGPS']];
+    gChartColumns = [
+      {
+        type: 'number',
+        label: 'datetime'
+      },
+      {
+        type: 'number',
+        label: 'vin',
+        color: defaultColors[0],
+        visible: true
+      },
+      {
+        type: 'number',
+        label: 'tempMotor',
+        color: defaultColors[1],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempMotor2',
+        color: defaultColors[2],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC',
+        color: defaultColors[3],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC2',
+        color: defaultColors[4],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'dutyCycle',
+        color: defaultColors[5],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor',
+        color: defaultColors[6],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor2',
+        color: defaultColors[7],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentBattery',
+        color: defaultColors[8],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'altitude',
+        color: defaultColors[9],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[10],
+        visible: true,
+      }
+    ];
   }
   else
   {
@@ -495,6 +766,60 @@ function parse_LogFile(txt){
         'currentBattery',
         'altitude',
         'speedGPS']];
+    gChartColumns = [
+      {
+        type: 'number',
+        label: 'datetime'
+      },
+      {
+        type: 'number',
+        label: 'vin',
+        color: defaultColors[0],
+        visible: true
+      },
+      {
+        type: 'number',
+        label: 'tempMotor',
+        color: defaultColors[1],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'tempESC',
+        color: defaultColors[2],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'dutyCycle',
+        color: defaultColors[3],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentMotor',
+        color: defaultColors[4],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'currentBattery',
+        color: defaultColors[5],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'altitude',
+        color: defaultColors[6],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[7],
+        visible: true,
+      }
+    ];
   }
 
   // Iterate parsed log
