@@ -54,7 +54,7 @@ var gDataTable;
 //Chart toggle series
 var dataView;
 var gChartColumns = [];
-var nullFunc = function() {return 0;};
+var nullFunc = function() {return null;};
 
 //Map
 var map;
