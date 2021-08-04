@@ -270,7 +270,10 @@ function create_map(){
             lat: 37.772,
             lng: -122.214,
           },
-          zoom: 8
+          zoom: 8,
+          mapTypeControlOptions: {
+            mapTypeIds: ["roadmap", "satellite", "hybrid", "terrain", "styled_map"],
+          },
         });
 
   //Associate the styled map with the MapTypeId and set it to display.
