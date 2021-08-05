@@ -394,6 +394,11 @@ function drawChart() {
         if (e.row == null) return;
         var value = gDataTable.getValue(e.row, 0);
 
+        // Make sure we have an entry to follow
+        if (parsedLogEntries[value] == null) {
+          return;
+        }
+        // Center map and set marker position
         if (markerChartHover == null) {
           
           markerChartHover = new google.maps.Marker({
@@ -485,6 +490,7 @@ function drawChart() {
 }
 
 function parse_LogFile(txt){
+  var utcOffset = null;
   var logEntries = [];
   var lines = txt.split("\n");
   names="Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, Altitude, Speed".split(",");
@@ -622,8 +628,19 @@ function parse_LogFile(txt){
               console.log("Error: Too many ESC IDs in data set");
           }
         }
+      } else if (values[0] == "header") {
+        if (values[1] == "utc_offset") {
+          console.log("Parsing:\n"+lines[i]);
+          var timeSegments = values[2].split(":");
+          utcOffset = parseInt(timeSegments[0]) * 60 * 60 * 1000;
+          utcOffset += parseInt(timeSegments[1]) * 60 * 1000;
+          utcOffset += parseInt(timeSegments[2]) * 1000;
+          console.log("parsed UTC offset: " + utcOffset + "\n");
+        } else {
+          //console.log("unparsed header line:\n"+lines[i]);
+        }
       } else {
-        console.log("unepxected data:\n"+lines[i])
+        console.log("unepxected data:\n"+lines[i]);
       }
     } catch (e) {
       console.log("parse_LogFile: exception");
@@ -915,6 +932,13 @@ function parse_LogFile(txt){
     ];
   }
 
+  // If utc offset was not found in log take from system
+  if (utcOffset == null) {
+    console.log("utc_offset was not found in header. Using browser offset");
+    utcOffset = new Date().getTimezoneOffset() * 60 * 1000 * -1; /* invert */
+    console.log(utcOffset);
+  }
+
   // Iterate parsed log
   for (const [key, value] of Object.entries(logEntries)) {
     if(value.vin != null) {
@@ -922,7 +946,7 @@ function parse_LogFile(txt){
 
       if (multi_esc_mode && quad_esc_mode) {
         gChartData.push([
-          new Date(key),
+          new Date(new Date(key).getTime() + utcOffset),
           value.vin,
           value.tempMotor,
           value.tempMotor2,
@@ -940,7 +964,7 @@ function parse_LogFile(txt){
         );
       } else if (multi_esc_mode) {
         gChartData.push([
-          new Date(key),
+          new Date(new Date(key).getTime() + utcOffset),
           value.vin,
           value.tempMotor,
           value.tempMotor2,
@@ -955,7 +979,7 @@ function parse_LogFile(txt){
         );
       } else {
         gChartData.push([
-          new Date(key),
+          new Date(new Date(key).getTime() + utcOffset),
           value.vin,
           value.tempMotor,
           value.tempESC,
