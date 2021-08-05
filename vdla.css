@@ -1,3 +1,17 @@
+body {
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size: inherit;
+  line-height: 1.4;
+  color: #e6e1e8;
+  background-color: #27262b;
+}
+.gm-style .gm-style-iw-d::-webkit-scrollbar-track, 
+.gm-style .gm-style-iw-d::-webkit-scrollbar-track-piece,
+.gm-style .gm-style-iw-c,
+.gm-style .gm-style-iw-t::after { 
+  background: #27262b;
+}
+
 #full{
   position:absolute;
   left:0px;
@@ -28,13 +42,15 @@
   width: 100%;
 }
 #mapid {
-   height: 50%;
+   height: 48%;
 }
 #chart_container{
    height: 50%;
-   width: 100%;
+   width: 98%;
    display: inline-block;
    margin: auto;
+     color: #e6e1e8;
+  background-color: #27262b;
 }
 #chart {
    height: 100%;
@@ -57,7 +73,8 @@
 
 .menu_container {
  position: fixed;
- right: 0;
+ right: 100px;
+ top: 10px;
  z-index: 9999;
 }
 
@@ -74,7 +91,7 @@
 }
 
 #settings_list{
-  height: 100px;
+  max-height: 100px;
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
@@ -120,4 +137,5 @@
 .uplot .legend.inline{
   display: block;
   max-width: 90vw;
+  max-height: 10%;
 }
