@@ -117,11 +117,6 @@ function get_Log(url){
   }
 }
 
-function print_data(){
-  console.log(names);
-  console.log(data);
-}
-
 function throttle(cb, limit) {
   var wait = false;
   return () => {
@@ -323,12 +318,17 @@ function selectHandler() {
         console.log('The user selected ' + value);
 
         console.log(parsedLogEntries[value]);
+        if (parsedLogEntries[value] == undefined) return;
         try {
-          map.setCenter({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+          var latitude = 0;
+          if (parsedLogEntries[value].lat != undefined) latitude = parsedLogEntries[value].lat;
+          var longitude = 0;
+          if (parsedLogEntries[value].lon != undefined) longitude = parsedLogEntries[value].lon;
+          map.setCenter({lat: latitude, lng: longitude});
           map.setZoom(20);
 
           var data = parsedLogEntries[value];
-          var infoWindowString = `Selected Moment
+          var infoWindowString = `Selected Moment:
           <br/>VIN: ${data.vin}
           <br/>tempMotor: ${data.tempMotor}
           <br/>tempESC: ${data.tempESC}
@@ -340,13 +340,14 @@ function selectHandler() {
           <br/>eRPM: ${data.eRPM}
           <br/>eDistance: ${data.eDistance}
           <br/>distance_km: ${data.distance}
-          <br/>speed_kph: ${data.speed}`;
+          <br/>speed_kph: ${data.speed}
+          <br/>fault: ${data.fault}`;
           if (markerChartSelection == null) {
             infowindowChartSelection = new google.maps.InfoWindow({
               content: infoWindowString,
             });
             markerChartSelection = new google.maps.Marker({
-              position: {lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon},
+              position: {lat: latitude, lng: longitude},
               map,
               title: "Curent Location",
             });
@@ -356,7 +357,7 @@ function selectHandler() {
             infowindowChartSelection.open(map, markerChartSelection);
           } else {
             infowindowChartSelection.setContent(infoWindowString);
-            markerChartSelection.setPosition({lat: parsedLogEntries[value].lat, lng: parsedLogEntries[value].lon});
+            markerChartSelection.setPosition({lat: latitude, lng: longitude});
             infowindowChartSelection.open(map, markerChartSelection);
           }
           
@@ -376,11 +377,11 @@ function drawChart() {
     google.visualization.events.addListener(chart, 'click', function (target) {
       if (target.targetID.match(/^legendentry#\d+$/)) {    
         var index = parseInt(target.targetID.slice(12)) + 1;
-        console.log(index);
+        //console.log(index);
         gChartColumns[index].visible = !gChartColumns[index].visible;
-        console.log("test");
+        //console.log("test");
         drawChart();
-        console.log("test2");
+        //console.log("test2");
       }
     });
 
@@ -396,6 +397,9 @@ function drawChart() {
 
         // Make sure we have an entry to follow
         if (parsedLogEntries[value] == null) {
+          return;
+        }
+        if (parsedLogEntries[value].lat == null) {
           return;
         }
         // Center map and set marker position
@@ -493,7 +497,7 @@ function parse_LogFile(txt){
   var utcOffset = null;
   var logEntries = [];
   var lines = txt.split("\n");
-  names="Voltage, Motor Temp, Mosfet Temp, DutyCycle, Motor Current, Battery Current, eRPM, eDistance, Altitude, Speed".split(",");
+
   for (var i in lines) {
     // Skip empty lines
     if (lines[i]==""){
@@ -651,27 +655,9 @@ function parse_LogFile(txt){
   // Prepare for gChart
   if (multi_esc_mode && quad_esc_mode)
   {
-    gChartData = [['datetime',
-        'vin',
-        'tempMotor',
-        'tempMotor2',
-        'tempMotor3',
-        'tempMotor4',
-        'tempESC',
-        'tempESC2',
-        'tempESC3',
-        'tempESC4',
-        'dutyCycle',
-        'currentMotor',
-        'currentMotor2',
-        'currentMotor3',
-        'currentMotor4',
-        'currentBattery',
-        'altitude',
-        'speedGPS']];
     gChartColumns = [
       {
-        type: 'number',
+        type: 'datetime',
         label: 'datetime'
       },
       {
@@ -766,35 +752,30 @@ function parse_LogFile(txt){
       },
       {
         type: 'number',
-        label: 'altitude',
+        label: 'speed',
         color: defaultColors[15],
         visible: true,
       },
       {
         type: 'number',
-        label: 'speedGPS',
+        label: 'altitude',
         color: defaultColors[16],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[17],
         visible: true,
       }
     ];
+    gChartData = [gChartColumns];
   }
   else if (multi_esc_mode)
   {
-    gChartData = [['datetime',
-        'vin',
-        'tempMotor',
-        'tempMotor2',
-        'tempESC',
-        'tempESC2',
-        'dutyCycle',
-        'currentMotor',
-        'currentMotor2',
-        'currentBattery',
-        'altitude',
-        'speedGPS']];
     gChartColumns = [
       {
-        type: 'number',
+        type: 'datetime',
         label: 'datetime'
       },
       {
@@ -853,32 +834,36 @@ function parse_LogFile(txt){
       },
       {
         type: 'number',
-        label: 'altitude',
+        label: 'speed',
         color: defaultColors[9],
         visible: true,
       },
       {
         type: 'number',
-        label: 'speedGPS',
+        label: 'fault',
         color: defaultColors[10],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'altitude',
+        color: defaultColors[11],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[12],
         visible: true,
       }
     ];
+    gChartData = [gChartColumns];
   }
   else
   {
-    gChartData = [['datetime',
-        'vin',
-        'tempMotor',
-        'tempESC',
-        'dutyCycle',
-        'currentMotor',
-        'currentBattery',
-        'altitude',
-        'speedGPS']];
     gChartColumns = [
       {
-        type: 'number',
+        type: 'datetime',
         label: 'datetime'
       },
       {
@@ -919,17 +904,24 @@ function parse_LogFile(txt){
       },
       {
         type: 'number',
-        label: 'altitude',
+        label: 'speed',
         color: defaultColors[6],
         visible: true,
       },
       {
         type: 'number',
-        label: 'speedGPS',
+        label: 'altitude',
         color: defaultColors[7],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[8],
         visible: true,
       }
     ];
+    gChartData = [gChartColumns];
   }
 
   // If utc offset was not found in log take from system
@@ -942,7 +934,7 @@ function parse_LogFile(txt){
   // Iterate parsed log
   for (const [key, value] of Object.entries(logEntries)) {
     if(value.vin != null) {
-      parsedLogEntries[new Date(key)] = value;
+      parsedLogEntries[new Date(new Date(key).getTime() + utcOffset)] = value;
 
       if (multi_esc_mode && quad_esc_mode) {
         gChartData.push([
@@ -959,6 +951,8 @@ function parse_LogFile(txt){
           value.currentMotor2,
           value.currentMotor3,
           value.currentBattery,
+          value.speed,
+          value.fault,
           value.altitude,
           value.speedGPS]
         );
@@ -974,6 +968,8 @@ function parse_LogFile(txt){
           value.currentMotor,
           value.currentMotor2,
           value.currentBattery,
+          value.speed,
+          value.fault,
           value.altitude,
           value.speedGPS]
         );
@@ -986,6 +982,8 @@ function parse_LogFile(txt){
           value.dutyCycle,
           value.currentMotor,
           value.currentBattery,
+          value.speed,
+          value.fault,
           value.altitude,
           value.speedGPS]
         );
