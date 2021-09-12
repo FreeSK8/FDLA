@@ -758,14 +758,20 @@ function parse_LogFile(txt){
       },
       {
         type: 'number',
-        label: 'altitude',
+        label: 'fault',
         color: defaultColors[16],
         visible: true,
       },
       {
         type: 'number',
-        label: 'speedGPS',
+        label: 'altitude',
         color: defaultColors[17],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[18],
         visible: true,
       }
     ];
@@ -910,14 +916,20 @@ function parse_LogFile(txt){
       },
       {
         type: 'number',
-        label: 'altitude',
+        label: 'fault',
         color: defaultColors[7],
         visible: true,
       },
       {
         type: 'number',
-        label: 'speedGPS',
+        label: 'altitude',
         color: defaultColors[8],
+        visible: true,
+      },
+      {
+        type: 'number',
+        label: 'speedGPS',
+        color: defaultColors[9],
         visible: true,
       }
     ];
